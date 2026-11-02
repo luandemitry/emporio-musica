@@ -10,3 +10,4 @@ venv/
 .env
 .sessions/
 logs/
+.handoffs/

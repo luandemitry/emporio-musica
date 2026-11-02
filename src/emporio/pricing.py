@@ -26,6 +26,11 @@ def format_brl(value: Decimal) -> str:
     return "R$ " + us.replace(",", "_").replace(".", ",").replace("_", ".")
 
 
+def money(value: Decimal) -> dict:
+    """A monetary value for tool results: the number plus the text to show the customer."""
+    return {"value": float(quantize(Decimal(value))), "display": format_brl(value)}
+
+
 @dataclass(frozen=True)
 class PriceInfo:
     list_price: Decimal
