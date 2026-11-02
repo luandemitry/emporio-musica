@@ -12,6 +12,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+ingest = ["pdfplumber>=0.11"]  # only to regenerate data/politicas_da_loja.md from the PDF
 
 [tool.setuptools.packages.find]
 where = ["src"]

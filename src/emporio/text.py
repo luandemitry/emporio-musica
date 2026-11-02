@@ -14,7 +14,8 @@ STOPWORDS = frozenset(
     {
         "a", "as", "o", "os", "um", "uma", "uns", "umas", "de", "da", "do", "das", "dos",
         "e", "ou", "em", "no", "na", "com", "para", "pra", "por", "que", "ate",
-        "qual", "quais", "tem", "voce", "voces",
+        "qual", "quais", "tem", "voce", "voces", "como", "quando", "onde", "quanto", "quanta",
+        "posso", "pode", "podem", "preciso", "quero", "queria", "gostaria", "entre",
     }
 )  # fmt: skip
 
