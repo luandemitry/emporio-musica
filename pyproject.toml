@@ -9,6 +9,8 @@ description = "Customer support agent for Empório da Música (AI Engineer techn
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "google-genai>=2.34",
+    "python-dotenv>=1.0",
     "tzdata; sys_platform == 'win32'",  # zoneinfo has no system tz database on Windows
 ]
 
