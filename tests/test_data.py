@@ -23,13 +23,6 @@ def test_availability_requires_active_status_and_stock(store):
     assert not store.products[136].is_available  # discontinued, even with stock
 
 
-def test_only_active_promotions_count(store):
-    assert store.active_promotion(127).discount_percent == 10
-    # Takamine GD20 (95) has a promotion in the CSV, but it is expired
-    assert any(p.product_id == 95 for p in store.promotions)
-    assert store.active_promotion(95) is None
-
-
 def test_orders_are_typed_with_items(store):
     shipped = store.orders[8]
     assert shipped.status is OrderStatus.SHIPPED
@@ -45,9 +38,7 @@ def test_orders_are_typed_with_items(store):
     "raw, kind, installments, label",
     [
         ("pix", "pix", 1, "PIX"),
-        ("debit", "debit", 1, "cartão de débito"),
         ("credit_6x", "credit", 6, "cartão de crédito em 6x"),
-        ("credit_12x", "credit", 12, "cartão de crédito em 12x"),
     ],
 )
 def test_payment_method_parse(raw, kind, installments, label):

@@ -109,5 +109,4 @@ def create_agent(settings: Settings, session_id: str, llm: LLM | None = None) ->
         session_id=session_id,
     )
     llm = llm or GeminiLLM(settings.model, api_key=settings.api_key)
-    agent = Agent(llm, ToolRegistry(ctx), session, store, settings.clock)
-    return agent
+    return Agent(llm, ToolRegistry(ctx), session, store, settings.clock)
