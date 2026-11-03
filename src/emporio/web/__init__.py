@@ -1,8 +1,7 @@
 """Small web front end for the agent (Flask), a thin layer over ``Agent.respond``.
 
-    pip install -e ".[web]"
-    python -m emporio.web                 # http://127.0.0.1:5000
-    python -m emporio.web --now 2026-02-20T10:00 --port 8000
+    python main.py web                    # http://127.0.0.1:5000
+    python main.py web --now 2026-02-20T10:00 --port 8000
 
 The browser keeps a conversation id in localStorage; the server keeps one agent per id (and the
 usual JSON session file), so a page reload resumes the conversation. Requests are serialised
@@ -95,7 +94,7 @@ def create_app(settings: Settings, llm: LLM | None = None) -> Flask:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="emporio.web", description="Web chat for the Empório da Música agent.")
+    parser = argparse.ArgumentParser(prog="main.py web", description="Web chat for the Empório da Música agent.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=5000)
     parser.add_argument("--now", help="freeze the clock (store local time), e.g. 2026-02-20T10:00")

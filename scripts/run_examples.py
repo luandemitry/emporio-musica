@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))  # run without installing
+
 from emporio.agent import create_agent
 from emporio.clock import Clock
 from emporio.config import Settings

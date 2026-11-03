@@ -1,0 +1,4 @@
+google-genai>=2.34
+python-dotenv>=1.0
+flask>=3
+tzdata; sys_platform == "win32"

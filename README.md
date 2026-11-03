@@ -16,31 +16,27 @@ Requires Python 3.10+ and a [Gemini API key](https://aistudio.google.com/apikey)
 
 ```bash
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+pip install -r requirements.txt
 cp .env.example .env                                   # then put your key in GEMINI_API_KEY
-python -m emporio
+python main.py                                         # chat with Léo in the terminal
+python main.py web                                     # or in the browser: http://127.0.0.1:5000
 ```
 
-In **GitHub Codespaces**, skip the `.env`: add `GEMINI_API_KEY` as a Codespaces secret, open the
-codespace and run the same `pip install` and `python -m emporio` commands.
+In **GitHub Codespaces**, skip the `.env`: add `GEMINI_API_KEY` under Settings → Secrets and
+variables → **Codespaces** (not "Actions", which codespaces cannot read), grant it to this
+repository, create or restart the codespace and run the same `pip install` and `python main.py`
+commands (for the web chat, open the forwarded port 5000).
 
 ```text
-python -m emporio                          # new conversation
-python -m emporio --verbose                # also print every tool call and its result
-python -m emporio --session maria          # resume (or create) the conversation "maria"
-python -m emporio --now 2026-02-20T10:00   # freeze the store clock (see "Clock" below)
-python -m emporio --model gemini-3.8-flash   # a stronger model than the default, uses more quota
+python main.py                          # new conversation
+python main.py --verbose                # also print every tool call and its result
+python main.py --session maria          # resume (or create) the conversation "maria"
+python main.py --now 2026-02-20T10:00   # freeze the store clock (see "Clock" below)
+python main.py --model gemini-3.8-flash # a stronger model than the default, uses more quota
+python main.py web --port 8000          # web chat; accepts the same --now and --model
 ```
 
-Prefer a browser? Install the small Flask front end and open http://127.0.0.1:5000
-(in Codespaces, open the forwarded port 5000):
-
-```bash
-pip install -e ".[web]"
-python -m emporio.web                      # also accepts --now, --model, --host, --port
-```
-
-The page is a chat with Léo plus a "How I got this result" panel: for any reply it shows the
+The web page is a chat with Léo plus a "How I got this result" panel: for any reply it shows the
 question, each tool the agent called with its arguments and result, the answer, and which data
 files were read. The panel shows the real tool trace, not a model-written explanation.
 Conversations survive a page reload.
@@ -52,6 +48,7 @@ listed in `.env.example`: `GEMINI_API_KEY`, `GEMINI_MODEL`, `EMPORIO_NOW`,
 Tests (no network or API key needed):
 
 ```bash
+pip install pytest
 pytest
 ```
 
@@ -206,5 +203,5 @@ tests/                   unit tests (no network needed)
 
 The challenge files were only renamed (`desafio_tecnico_ai_eng - products.csv` → `products.csv`,
 `políticas_da_loja.pdf` → `politicas_da_loja.pdf`); their content is unchanged. To regenerate
-`data/politicas_da_loja.md` from the PDF: `pip install -e ".[ingest]"` and
+`data/politicas_da_loja.md` from the PDF: `pip install pdfplumber` and
 `python scripts/ingest_policies.py`.
