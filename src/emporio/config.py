@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from .clock import Clock
 from .data import default_data_dir
 
-DEFAULT_MODEL = "gemini-3.8-flash"  # stable, free tier, recommended by Google for new projects
+DEFAULT_MODEL = "gemini-3.5-flash-lite"  # stable and light: the free tier's usage limits are what constrains this project
 
 
 @dataclass(frozen=True)
