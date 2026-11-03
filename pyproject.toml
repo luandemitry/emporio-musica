@@ -14,6 +14,9 @@ dependencies = [
     "tzdata; sys_platform == 'win32'",  # zoneinfo has no system tz database on Windows
 ]
 
+[project.scripts]
+emporio = "emporio.cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 ingest = ["pdfplumber>=0.11"]  # only to regenerate data/politicas_da_loja.md from the PDF
