@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Léo · Empório da Música</title>
+<style>
+  :root {
+    --ink: #1b2333; --muted: #4a5568; --navy: #1f2a44; --brass: #e8b341;
+    --bg: #e6eaee; --panel: #ffffff; --chat-bg: #f4f6f8; --line: #dce2e9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 20px 16px 28px; display: flex; flex-direction: column; gap: 14px; }
+  .topbar { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; font-size: 13px; font-weight: 500; color: var(--muted); }
+  .layout { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .chat { flex: 1 1 520px; max-width: 680px; height: min(720px, calc(100vh - 110px)); min-height: 460px; display: flex; flex-direction: column; background: var(--panel); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(20,30,50,.12); }
+  .chat-head { display: flex; align-items: center; gap: 14px; padding: 14px 20px; background: var(--navy); color: #fff; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--brass); color: var(--navy); display: grid; place-items: center; font-weight: 700; font-size: 20px; flex: none; }
+  .chat-head .who { flex: 1; min-width: 0; }
+  .chat-head .name { font-size: 17px; font-weight: 700; }
+  .chat-head .sub { font-size: 13px; color: #c9d2e3; }
+  .chat-head button { background: transparent; color: #fff; border: 1px solid #8190ad; border-radius: 16px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  .chat-head button:hover { background: #2b3a5c; }
+  .messages { flex: 1; overflow-y: auto; padding: 20px; background: var(--chat-bg); display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 82%; padding: 10px 14px; border-radius: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--navy); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.agent { align-self: flex-start; background: #fff; border-bottom-left-radius: 4px; box-shadow: 0 1px 1px rgba(20,30,50,.1); }
+  .msg.error { align-self: center; background: #fdecea; color: #7a1c14; font-size: 14px; }
+  .msg.typing { color: var(--muted); font-style: italic; }
+  .why { align-self: flex-start; margin-top: -4px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 14px; border: 1px solid var(--navy); background: #fff; color: var(--navy); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .why:hover, .why[aria-pressed="true"] { background: var(--navy); color: #fff; }
+  .composer { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--line); background: #fff; }
+  .composer input { flex: 1; min-width: 0; height: 46px; padding: 0 18px; border: 1px solid #c5ced9; border-radius: 23px; font: inherit; color: var(--ink); }
+  .composer input:focus-visible, button:focus-visible { outline: 3px solid #2f6fed; outline-offset: 2px; }
+  .composer button { width: 46px; height: 46px; border: 0; border-radius: 50%; background: var(--brass); color: var(--navy); display: grid; place-items: center; cursor: pointer; flex: none; }
+  .composer button:disabled, .composer input:disabled { opacity: .55; cursor: not-allowed; }
+  .trace { flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .trace h2 { margin: 0; font-size: 18px; }
+  .trace .hint { margin: 0; font-size: 14px; color: var(--muted); }
+  ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  ol.steps > li { display: flex; gap: 12px; }
+  .rail { display: flex; flex-direction: column; align-items: center; }
+  .dot { width: 28px; height: 28px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; flex: none; }
+  .dot.last { background: var(--brass); color: var(--navy); }
+  .line { width: 2px; flex: 1; background: #b8c2d0; margin: 4px 0; }
+  .step { flex: 1; min-width: 0; padding-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .label { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+  .card { background: #fff; border-radius: 12px; padding: 11px 13px; font-size: 14px; box-shadow: 0 1px 2px rgba(20,30,50,.12); overflow-wrap: anywhere; }
+  .card .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  .tag { font-size: 12px; font-weight: 500; padding: 2px 9px; border-radius: 10px; background: var(--brass); color: var(--navy); white-space: nowrap; }
+  .tag.policy { background: var(--navy); color: #fff; }
+  .card pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .sources { font-size: 13px; color: var(--muted); }
+  .sources b { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+  @media (max-width: 640px) { .chat { height: calc(100vh - 90px); } .msg { max-width: 92%; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <span id="model-info">Empório da Música customer support</span>
+    <span id="clock-info"></span>
+  </div>
+  <div class="layout">
+    <section class="chat" aria-label="Chat with Léo">
+      <div class="chat-head">
+        <div class="avatar" aria-hidden="true">L</div>
+        <div class="who">
+          <div class="name">Léo</div>
+          <div class="sub">Empório da Música · Campo Grande, MS</div>
+        </div>
+        <button type="button" id="new-chat">New conversation</button>
+      </div>
+      <div class="messages" id="messages" role="log" aria-live="polite"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <label for="input" class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)">Message to Léo</label>
+        <input id="input" type="text" placeholder="Type your message" maxlength="2000">
+        <button type="submit" id="send" aria-label="Send message">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+    </section>
+
+    <aside class="trace" aria-label="How I got this result">
+      <h2>How I got this result</h2>
+      <p class="hint" id="trace-hint">Select “How I got this result” under any reply to see what the agent looked up before answering.</p>
+      <ol class="steps" id="steps"></ol>
+      <div class="sources" id="sources" hidden></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var messages = document.getElementById("messages");
+  var input = document.getElementById("input");
+  var send = document.getElementById("send");
+  var steps = document.getElementById("steps");
+  var sources = document.getElementById("sources");
+  var hint = document.getElementById("trace-hint");
+  var selectedButton = null;
+
+  // Which file each tool reads, for the "Sources" line (mirrors src/emporio/registry.py).
+  var SOURCES = {
+    search_products: ["products.csv", "categories.csv", "promotions.csv"],
+    get_product: ["products.csv", "promotions.csv"],
+    list_categories: ["categories.csv", "products.csv"],
+    simulate_payment: ["products.csv", "promotions.csv", "politicas_da_loja.md"],
+    consult_policies: ["politicas_da_loja.md"],
+    get_store_status: ["store hours and holiday calendar"],
+    get_order_status: ["orders.csv", "order_items.csv", "customers.csv"],
+    check_return_eligibility: ["orders.csv", "customers.csv", "politicas_da_loja.md"],
+    request_human_followup: ["handoff ticket log"]
+  };
+
+  function store(key, value) {
+    try { if (value === undefined) { return localStorage.getItem(key); } localStorage.setItem(key, value); } catch (e) { return null; }
+    return value;
+  }
+  function newId() {
+    var id = "web-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    store("emporio-session", id);
+    return id;
+  }
+  var sessionId = store("emporio-session") || newId();
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) { node.className = cls; }
+    if (text !== undefined) { node.textContent = text; }
+    return node;
+  }
+  function scroll() { messages.scrollTop = messages.scrollHeight; }
+
+  function formatArgs(args) {
+    return Object.keys(args || {}).map(function (k) { return k + "=" + JSON.stringify(args[k]); }).join(", ");
+  }
+  function pretty(value) { return JSON.stringify(value, null, 2); }
+
+  function addStep(list, number, label, body, isLast) {
+    var li = el("li");
+    var rail = el("div", "rail");
+    rail.appendChild(el("div", "dot" + (isLast ? " last" : ""), String(number)));
+    if (!isLast) { rail.appendChild(el("div", "line")); }
+    var step = el("div", "step");
+    step.appendChild(el("div", "label", label));
+    step.appendChild(body);
+    li.appendChild(rail);
+    li.appendChild(step);
+    list.appendChild(li);
+  }
+
+  function showTrace(entry) {
+    steps.replaceChildren();
+    sources.replaceChildren();
+    hint.hidden = true;
+
+    var n = 1;
+    addStep(steps, n++, "Customer asked", el("div", "card", entry.user), false);
+
+    var tools = entry.tools || [];
+    if (!tools.length) {
+      addStep(steps, n++, "No tools needed", el("div", "card", "The agent answered directly, without looking anything up."), false);
+    }
+    var used = [];
+    tools.forEach(function (tool) {
+      var card = el("div", "card");
+      var head = el("div", "head");
+      head.appendChild(el("span", "mono", tool.name + "(" + formatArgs(tool.args) + ")"));
+      var kind = tool.name === "consult_policies" ? "policy" : tool.name === "request_human_followup" ? "hand-off" : "data";
+      head.appendChild(el("span", "tag" + (kind === "policy" ? " policy" : ""), kind));
+      card.appendChild(head);
+      var text = pretty(tool.result);
+      var short = text.length > 420 ? text.slice(0, 420) + "…" : text;
+      card.appendChild(el("pre", "mono", short));
+      if (text.length > 420) {
+        var details = el("details");
+        details.appendChild(el("summary", "", "Show full result"));
+        details.appendChild(el("pre", "mono", text));
+        card.appendChild(details);
+      }
+      addStep(steps, n++, "Called a tool", card, false);
+      (SOURCES[tool.name] || []).forEach(function (s) { if (used.indexOf(s) < 0) { used.push(s); } });
+    });
+    addStep(steps, n, "Answered", el("div", "card", entry.assistant), true);
+
+    if (used.length) {
+      sources.appendChild(el("b", "", "Sources"));
+      sources.appendChild(el("span", "mono", used.join(" · ")));
+      sources.hidden = false;
+    } else {
+      sources.hidden = true;
+    }
+  }
+
+  function addUser(text) {
+    messages.appendChild(el("div", "msg user", text));
+    scroll();
+  }
+  function addAgent(entry) {
+    messages.appendChild(el("div", "msg agent", entry.assistant));
+    var why = el("button", "why", "How I got this result");
+    why.type = "button";
+    why.setAttribute("aria-pressed", "false");
+    why.addEventListener("click", function () {
+      if (selectedButton) { selectedButton.setAttribute("aria-pressed", "false"); }
+      why.setAttribute("aria-pressed", "true");
+      selectedButton = why;
+      showTrace(entry);
+    });
+    messages.appendChild(why);
+    scroll();
+    return why;
+  }
+  function addError(text) {
+    messages.appendChild(el("div", "msg error", text));
+    scroll();
+  }
+
+  function greeting() {
+    messages.appendChild(el("div", "msg agent", "Oi! Eu sou o Léo, da Empório da Música. Como posso te ajudar?"));
+  }
+
+  function loadHistory() {
+    fetch("/api/sessions/" + encodeURIComponent(sessionId))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var transcript = data.transcript || [];
+        if (!transcript.length) { greeting(); return; }
+        transcript.forEach(function (entry) { addUser(entry.user); addAgent(entry); });
+      })
+      .catch(function () { greeting(); });
+  }
+
+  function setBusy(busy) { input.disabled = busy; send.disabled = busy; }
+
+  document.getElementById("composer").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var text = input.value.trim();
+    if (!text) { return; }
+    input.value = "";
+    addUser(text);
+    var typing = el("div", "msg agent typing", "Léo is typing…");
+    messages.appendChild(typing);
+    scroll();
+    setBusy(true);
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, message: text })
+    })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        typing.remove();
+        if (!res.ok) { addError(res.data.error || "Something went wrong."); return; }
+        var why = addAgent({ user: text, tools: res.data.tools, assistant: res.data.text });
+        why.click();
+      })
+      .catch(function () { typing.remove(); addError("Could not reach the server."); })
+      .then(function () { setBusy(false); input.focus(); });
+  });
+
+  document.getElementById("new-chat").addEventListener("click", function () {
+    sessionId = newId();
+    messages.replaceChildren();
+    steps.replaceChildren();
+    sources.hidden = true;
+    hint.hidden = false;
+    selectedButton = null;
+    greeting();
+    input.focus();
+  });
+
+  fetch("/api/info").then(function (r) { return r.json(); }).then(function (info) {
+    document.getElementById("model-info").textContent = "Empório da Música customer support · model " + info.model;
+    document.getElementById("clock-info").textContent =
+      (info.clock_frozen ? "Store clock (frozen): " : "Store clock: ") + info.clock;
+  }).catch(function () {});
+
+  loadHistory();
+})();
+</script>
+</body>
+</html>
