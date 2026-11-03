@@ -1,0 +1,180 @@
+"""Generate the example conversations in ``examples/`` by running the real agent.
+
+Every transcript is produced by calling the Gemini API with your key; nothing is written by hand.
+Run it from the repository root after setting GEMINI_API_KEY:
+
+    python scripts/run_examples.py                 # all scenarios
+    python scripts/run_examples.py --only 04       # one scenario (matches the file-name prefix)
+
+A scenario that fails midway (API outage, quota) is not written, so ``examples/`` never holds
+half a conversation. Re-run it later; quota errors on the free tier usually pass after a minute.
+"""
+
+from __future__ import annotations
+
+import argparse
+import dataclasses
+import json
+import sys
+import tempfile
+import time
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+
+from emporio.agent import create_agent
+from emporio.clock import Clock
+from emporio.config import Settings
+from emporio.llm import LLM, LLMUnavailable
+
+ROOT = Path(__file__).resolve().parent.parent
+RESULT_WIDTH = 400  # characters of each tool result kept in the transcript
+
+
+@dataclass(frozen=True)
+class Scenario:
+    slug: str
+    title: str
+    shows: str  # what the conversation demonstrates (English, goes in the file)
+    now: str  # frozen store clock, local time
+    turns: tuple[str, ...]  # customer messages (Brazilian Portuguese, as a customer would write)
+
+
+SCENARIOS = [
+    Scenario(
+        "01-catalogue-budget",
+        "Catalogue search within a budget",
+        "Querying product data with a price filter and recommending from the results.",
+        "2026-02-20T10:00",
+        (
+            "Oi! Tô procurando um violão de até 1000 reais, o que vocês têm?",
+            "E qual desses você acha melhor pra quem tá começando?",
+        ),
+    ),
+    Scenario(
+        "02-price-promotion-payment",
+        "Price, expired promotion, PIX and instalments",
+        "Live product data, an inactive promotion that must not be applied, and the payment rules (PIX discount, instalment minimums).",
+        "2026-02-20T10:00",
+        (
+            "Quanto custa o Takamine GD20?",
+            "Dá pra parcelar? E no PIX tem desconto?",
+            "Vi uma promoção de 12% nele, ainda vale?",
+        ),
+    ),
+    Scenario(
+        "03-order-status-verification",
+        "Order status with identity verification",
+        "Customer data is only shared after the order id matches an e-mail or phone; a wrong attempt gets a generic answer.",
+        "2026-02-20T10:00",
+        (
+            "Quero saber do meu pedido 8",
+            "Meu email é ana.silva@jmail.com",
+            "Ops, errei. O email certo é anacarol.ferreira@coldmail.com",
+        ),
+    ),
+    Scenario(
+        "04-return-regret-policy-and-data",
+        "Return for regret: order data + policy rules",
+        "Non-trivial: combines the order record (delivered, delivery date, today's date) with the returns policy to decide eligibility, then answers a follow-up from the policy manual.",
+        "2026-02-20T10:00",
+        (
+            "Oi, comprei o pedido 7 e me arrependi. Dá pra devolver?",
+            "O email da compra é leticia.rocha@jmail.com",
+            "E como eu recebo o reembolso? Quem paga o frete da devolução?",
+        ),
+    ),
+    Scenario(
+        "05-out-of-scope",
+        "Out-of-scope questions",
+        "Politely declines what the store does not cover, stays in persona and offers what it can do or a human follow-up.",
+        "2026-02-20T10:00",
+        (
+            "Vocês consertam violão? O meu tá com a ponte soltando.",
+            "Beleza. Aproveitando, me ajuda a escrever um e-mail pro meu chefe?",
+        ),
+    ),
+]
+
+
+def run_scenario(scenario: Scenario, settings: Settings, llm: LLM | None = None, pause: float = 0) -> list[dict]:
+    """Play the customer messages against a fresh agent; return the transcript entries."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        scenario_settings = dataclasses.replace(
+            settings,
+            clock=Clock(datetime.fromisoformat(scenario.now)),
+            sessions_dir=tmp_path / "sessions",
+            handoff_log=tmp_path / "handoffs.jsonl",
+        )
+        agent = create_agent(scenario_settings, scenario.slug, llm=llm)
+        for index, message in enumerate(scenario.turns):
+            if index and pause:
+                time.sleep(pause)  # stay under the free tier's requests-per-minute limit
+            agent.respond(message)
+        return list(agent.session.transcript)
+
+
+def _short(value: object) -> str:
+    text = json.dumps(value, ensure_ascii=False)
+    return text if len(text) <= RESULT_WIDTH else text[: RESULT_WIDTH - 1] + "…"
+
+
+def render(scenario: Scenario, transcript: list[dict], model: str) -> str:
+    clock = datetime.fromisoformat(scenario.now)
+    lines = [
+        f"# {scenario.title}",
+        "",
+        f"**What it shows:** {scenario.shows}",
+        "",
+        f"Generated by `scripts/run_examples.py` with the real agent (model `{model}`) on {date.today():%Y-%m-%d}. "
+        f"The store clock was frozen at {clock:%Y-%m-%d %H:%M} so the sample data is current. "
+        "The customer speaks Brazilian Portuguese; the tool lines show what the agent looked up.",
+        "",
+    ]
+    for entry in transcript:
+        lines += [f"**Customer:** {entry['user']}", ""]
+        if entry["tools"]:
+            lines += ["<details><summary>Tools called</summary>", ""]
+            for tool in entry["tools"]:
+                args = ", ".join(f"{k}={v!r}" for k, v in tool["args"].items())
+                lines += [f"- `{tool['name']}({args})`", f"  - result: `{_short(tool['result'])}`"]
+            lines += ["", "</details>", ""]
+        lines += [f"**Léo:** {entry['assistant']}", ""]
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Generate example conversations with the real agent.")
+    parser.add_argument("--only", help="run only scenarios whose file name starts with this prefix, e.g. 04")
+    parser.add_argument("--out", type=Path, default=ROOT / "examples", help="output directory (default: examples/)")
+    parser.add_argument("--pause", type=float, default=6, help="seconds to wait between messages (free-tier rate limit)")
+    args = parser.parse_args(argv)
+
+    settings = Settings.from_env()
+    if not settings.api_key:
+        print("Error: set GEMINI_API_KEY (or put it in .env) before generating examples.", file=sys.stderr)
+        return 2
+
+    chosen = [s for s in SCENARIOS if not args.only or s.slug.startswith(args.only)]
+    if not chosen:
+        print(f"No scenario starts with {args.only!r}.", file=sys.stderr)
+        return 2
+
+    args.out.mkdir(parents=True, exist_ok=True)
+    failures = 0
+    for scenario in chosen:
+        print(f"{scenario.slug} ...", end=" ", flush=True)
+        try:
+            transcript = run_scenario(scenario, settings, pause=args.pause)
+        except LLMUnavailable as exc:
+            failures += 1
+            print(f"FAILED ({exc}); not written")
+            continue
+        (args.out / f"{scenario.slug}.md").write_text(render(scenario, transcript, settings.model), encoding="utf-8")
+        print("ok")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
