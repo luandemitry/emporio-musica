@@ -181,10 +181,13 @@ errata and internal notes ("do not repeat to the customer"), and the agent is to
 - **Concurrency and storage:** sessions and tickets are local files, fine for a demo, not for
   several processes. I would use a database and real ticketing integration.
 - **Single language:** Léo answers in the customer's language but is tuned for Portuguese.
-- **Out-of-scope replies can send the customer to a competitor.** Asked about accessories the
-  store does not sell, the agent once suggested looking for a specialised shop. The persona
-  should instead say the store only sells instruments and offer to help with one. Found while
-  testing; a prompt rule plus an out-of-scope case in the evaluation set would fix it.
+- **Out-of-scope replies and services the data does not mention.** Testing showed the agent
+  pointing customers to other shops (my own persona rule told it to) and stating that the store
+  does not do repairs, which nothing in the data says. The persona now says the store only sells
+  instruments, never names other businesses, and treats services as unknown until a policy
+  lookup shows them, offering a hand-off otherwise. This is a prompt fix checked by regenerating
+  one example, not by a regression suite: an evaluation set with out-of-scope and unknown-service
+  cases is what would keep it from coming back.
 - **Noisy messages are not explicitly handled.** A message that mixed a real question with pasted
   notes was answered correctly, but only because the model ignored the extra text. The same
   weakness covers instructions hidden in a message ("ignore your rules"): both deserve their own
